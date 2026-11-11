@@ -2,8 +2,9 @@
 
 This repo gives your team a working pipeline for the final project:
 
-1. **Load** your own images (or a table) from files, clean them, and
-   split them into train, validation and test sets.
+1. **Load** your own images (or a table, or short texts such as
+   tweets) from files, clean them, and split them into train,
+   validation and test sets.
 2. **Train** a pretrained ResNet-18, a small CNN from scratch, or an
    MLP baseline, with learning curves and an experiment log.
 3. **Evaluate** it: a confusion matrix and the worst mistakes,
@@ -28,6 +29,7 @@ about 15 minutes and saves hours.
 - [Step 4 · Run notebook 02: train and evaluate](#step-4--run-notebook-02-train-and-evaluate)
 - [Step 4b · Run notebook 04: evaluate the final model](#step-4b--run-notebook-04-evaluate-the-final-model)
 - [Step 5 · Table data instead of images: notebook 03](#step-5--table-data-instead-of-images-notebook-03)
+- [Step 5b · Tweets and other short texts: notebook 05](#step-5b--tweets-and-other-short-texts-notebook-05)
 - [Step 6 · Run the Streamlit app](#step-6--run-the-streamlit-app)
 - [Step 7 · What to commit to GitHub](#step-7--what-to-commit-to-github)
 - [Where each project requirement comes from](#where-each-project-requirement-comes-from)
@@ -46,13 +48,16 @@ csc451-project-starter/
 │   ├── 02_train_image_model.ipynb  train (ResNet-18, small CNN or MLP),
 │   │                               log, test, save the model
 │   ├── 03_table_data.ipynb         the same for a CSV table
-│   └── 04_evaluate_model.ipynb     curves, threshold, experiment chart
+│   ├── 04_evaluate_model.ipynb     curves, threshold, experiment chart
+│   └── 05_text_data.ipynb          the same for tweets and short texts
 ├── src/
 │   ├── data_utils.py               the code that loads images from files
-│   └── train_utils.py              training, evaluation, experiment log
+│   ├── train_utils.py              training, evaluation, experiment log
+│   └── text_utils.py               cleaning and encoding short texts
 └── app/
     ├── app.py                      Streamlit app for an image model
     ├── app_tabular.py              Streamlit app for a table model
+    ├── app_text.py                 Streamlit app for a text model
     └── requirements.txt            packages the app needs
 ```
 
@@ -355,6 +360,57 @@ for `app/app_tabular.py`.
 
 ---
 
+## Step 5b · Tweets and other short texts: notebook 05
+
+If each example is a short text with a label (a tweet, a review, a
+headline), use `notebooks/05_text_data.ipynb` instead of notebooks
+01 and 02.
+
+**Your data:** one CSV file in `csc451_project` on Drive, with one
+column for the text and one for the label, for example:
+
+```
+text,label
+"Loved the new update!! 🎉 https://t.co/x1",positive
+"@brand_help my order is late again",negative
+```
+
+In the settings cell, set `CSV_NAME`, `TEXT_COLUMN` and `LABEL_COLUMN`,
+then run all cells. The notebook:
+
+1. **Cleans** each text: lower case; links become `<url>` and user
+   names become `<user>` (every link and name is different, so the
+   model cannot learn from them otherwise); `RT` is removed. Hashtags,
+   emoji and punctuation stay.
+2. **Removes duplicates**, which are common in tweets (retweets, bots).
+   A copy in training and another in the test set is data leakage.
+   Texts that appear with two different labels are removed too.
+3. **Splits** the texts (stratified) and saves the split.
+4. Builds the **vocabulary** (the words the model knows) from the
+   training texts only, and reports how many validation words are
+   unknown.
+5. **Trains** one of two models, set with `MODEL`:
+   - `"bag_of_words"`: averages the word vectors and ignores word
+     order. This is your **baseline**.
+   - `"text_cnn"`: a 1D CNN whose filters slide over 3 neighboring
+     words and detect short phrases such as "not good". It uses the
+     same ideas as the Week 11 CNN, on a sequence of words.
+6. Logs each run in `outputs/experiments_text.csv`, and (with
+   `EVALUATE_TEST = True`) shows the test confusion matrix and the
+   most confidently wrong texts for your error analysis.
+7. Saves `best_text.pt` and `text_info.json` for `app/app_text.py`.
+
+Run it once with each model and compare them in the log. Notebook 04
+is written for image models; for text, use Step 13 of notebook 05.
+
+**Where to get labeled tweets:** the X (Twitter) API has no free way
+to read tweets; it charges for every tweet it returns. Most teams
+start from a public labeled dataset (Kaggle has many) and clean it
+here. Say in your README where
+the data came from and how the labels were made.
+
+---
+
 ## Step 6 · Run the Streamlit app
 
 The app runs on your laptop, not in Colab.
@@ -374,7 +430,9 @@ The app runs on your laptop, not in Colab.
    ```
    streamlit run app.py
    ```
-   (For a table model: `streamlit run app_tabular.py`. On Windows, if
+   (For a table model: `streamlit run app_tabular.py`; for a text
+   model: `streamlit run app_text.py`, with `best_text.pt` and
+   `text_info.json` in `app/`. On Windows, if
    `streamlit` is not found, use `python -m streamlit run app.py`.)
 5. Your browser opens `http://localhost:8501`. Ctrl+C in the terminal
    stops the app.
@@ -425,6 +483,7 @@ inside Colab's file browser are lost when the session ends.
 | A proper data split | Notebook 01, Step 10: `splits.csv` (plus groups, if needed) |
 | Baselines (largest class and MLP) | Notebook 02: Step 5 every run, plus one run with `MODEL = "mlp"` |
 | A small CNN or a pretrained CNN | Notebook 02: `MODEL = "small_cnn"` or `"resnet18"` |
+| Text projects: a baseline and a CNN | Notebook 05: `MODEL = "bag_of_words"` and `"text_cnn"` |
 | Learning curves | Notebook 02, Step 9: `learning_curves.png` |
 | A log of experiments | Notebook 02, Step 10: `experiments.csv` |
 | An honest analysis of errors | Notebook 02, Step 11: per-class accuracy, confusion matrix, worst mistakes |
