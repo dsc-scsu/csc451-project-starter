@@ -6,8 +6,9 @@ This repo gives your team a working pipeline for the final project:
    split them into train, validation and test sets.
 2. **Train** a pretrained ResNet-18, a small CNN from scratch, or an
    MLP baseline, with learning curves and an experiment log.
-3. **Evaluate** it once on the test set, with a confusion matrix and
-   the worst mistakes.
+3. **Evaluate** it: a confusion matrix and the worst mistakes,
+   precision-recall and ROC curves, a decision threshold chosen from the
+   cost of each mistake, and a chart comparing your experiments.
 4. **Serve** it in a Streamlit app.
 
 You change settings, not code: every place you must edit is marked
@@ -25,6 +26,7 @@ about 15 minutes and saves hours.
 - [Step 2 · Zip the data and put it on Google Drive](#step-2--zip-the-data-and-put-it-on-google-drive)
 - [Step 3 · Run notebook 01: load and split](#step-3--run-notebook-01-load-and-split)
 - [Step 4 · Run notebook 02: train and evaluate](#step-4--run-notebook-02-train-and-evaluate)
+- [Step 4b · Run notebook 04: evaluate the final model](#step-4b--run-notebook-04-evaluate-the-final-model)
 - [Step 5 · Table data instead of images: notebook 03](#step-5--table-data-instead-of-images-notebook-03)
 - [Step 6 · Run the Streamlit app](#step-6--run-the-streamlit-app)
 - [Step 7 · What to commit to GitHub](#step-7--what-to-commit-to-github)
@@ -43,7 +45,8 @@ csc451-project-starter/
 │   ├── 01_load_image_data.ipynb    find, clean and split your images
 │   ├── 02_train_image_model.ipynb  train (ResNet-18, small CNN or MLP),
 │   │                               log, test, save the model
-│   └── 03_table_data.ipynb         the same for a CSV table
+│   ├── 03_table_data.ipynb         the same for a CSV table
+│   └── 04_evaluate_model.ipynb     curves, threshold, experiment chart
 ├── src/
 │   ├── data_utils.py               the code that loads images from files
 │   └── train_utils.py              training, evaluation, experiment log
@@ -68,6 +71,7 @@ each step of your data pipeline does.
 | 1–2. Organize, zip, upload the data | Your laptop, Google Drive | `data.zip` in Drive |
 | 3. Notebook 01 | Colab | `splits.csv`, `classes.json` in Drive |
 | 4. Notebook 02 (many runs) | Colab, GPU | `best.pt`, learning curves, `experiments.csv` |
+| 4b. Notebook 04 (final model) | Colab | Curves, a chosen threshold, an experiment chart |
 | 6. App | Your laptop | A web page that runs your model |
 
 Everything the notebooks produce is saved in **your Google Drive**,
@@ -302,6 +306,37 @@ measures how the model does on new data.
 
 ---
 
+## Step 4b · Run notebook 04: evaluate the final model
+
+Run `notebooks/04_evaluate_model.ipynb` after notebook 02 has trained
+your final model. It loads `outputs/best.pt` and covers the Week 10
+evaluation topics.
+
+In its settings cell, set:
+
+- `POSITIVE_CLASS`: the class that means "yes", the one you most need
+  to find (for example `"pneumonia"` or `"defective"`).
+- `COST_MISSED` and `COST_FALSE_ALARM`: how bad each kind of mistake
+  is. Only their ratio matters: 5 and 1 mean a missed case is 5 times
+  worse than a false alarm. Explain your choice in the presentation.
+
+It then shows:
+
+| Step | Output, saved in `outputs/` |
+|---|---|
+| 4 | Precision-recall and ROC curves with their AUC: `pr_roc_curves.png` |
+| 5 | Total cost at every threshold, and the cheapest threshold: `cost_vs_threshold.png` |
+| 6 | Confusion matrices at 0.5 and at the chosen threshold |
+| 7 | With `EVALUATE_TEST = True`: test results at the chosen threshold, `test_confusion_matrix.png` |
+| 8 | Every run in `experiments.csv` as one bar chart: `experiments_chart.png` |
+
+The threshold is chosen on the **validation** set; the test set only
+reports how well that choice works. With more than two classes, the
+notebook treats `POSITIVE_CLASS` against all the others. The last cell
+shows how to use your threshold in the app.
+
+---
+
 ## Step 5 · Table data instead of images: notebook 03
 
 If your data is a CSV table (one row per example), use
@@ -365,8 +400,8 @@ model's layers in `src/train_utils.py`, change `build_model` in
   `info.json` for a table model).
   ResNet-18's `best.pt` is about 45 MB; GitHub accepts files up to
   100 MB.
-- A `results/` folder with copies of `experiments.csv`,
-  `learning_curves.png` and `confusion_matrix.png` from Drive.
+- A `results/` folder with copies of `experiments.csv` and the plots
+  from notebooks 02 and 04 (the `.png` files in `outputs/` on Drive).
 - This README, updated to describe **your** project: the data, how to
   run it, and your results.
 
@@ -393,6 +428,8 @@ inside Colab's file browser are lost when the session ends.
 | Learning curves | Notebook 02, Step 9: `learning_curves.png` |
 | A log of experiments | Notebook 02, Step 10: `experiments.csv` |
 | An honest analysis of errors | Notebook 02, Step 11: per-class accuracy, confusion matrix, worst mistakes |
+| Evaluation beyond accuracy | Notebook 04: precision-recall and ROC curves, a threshold chosen from costs |
+| Comparing experiments | Notebook 04, Step 8: `experiments_chart.png` |
 | A Streamlit app | `app/` |
 | Optional: Cloud Run deployment | Week 14 slides; the `app/` folder is what you deploy |
 
