@@ -4,8 +4,8 @@ This repo gives your team a working pipeline for the final project:
 
 1. **Load** your own images (or a table) from files, clean them, and
    split them into train, validation and test sets.
-2. **Train** a pretrained model, with a baseline, learning curves and
-   an experiment log.
+2. **Train** a pretrained ResNet-18, a small CNN from scratch, or an
+   MLP baseline, with learning curves and an experiment log.
 3. **Evaluate** it once on the test set, with a confusion matrix and
    the worst mistakes.
 4. **Serve** it in a Streamlit app.
@@ -41,7 +41,8 @@ csc451-project-starter/
 ├── requirements.txt                packages, if you run notebooks on your laptop
 ├── notebooks/
 │   ├── 01_load_image_data.ipynb    find, clean and split your images
-│   ├── 02_train_image_model.ipynb  train, log, test, save the model
+│   ├── 02_train_image_model.ipynb  train (ResNet-18, small CNN or MLP),
+│   │                               log, test, save the model
 │   └── 03_table_data.ipynb         the same for a CSV table
 ├── src/
 │   ├── data_utils.py               the code that loads images from files
@@ -244,20 +245,36 @@ Open `notebooks/02_train_image_model.ipynb` the same way. First
 choose **Runtime → Change runtime type → T4 GPU**; training on the
 CPU is many times slower.
 
+**Choose a model** with `MODEL` in the settings cell:
+
+| `MODEL` | What it is | `IMAGE_SIZE` |
+|---|---|---|
+| `"resnet18"` | Pretrained ResNet-18 (Week 12). Trains in two phases: first only the new head, then the whole network at a smaller learning rate. The best choice for photos | 224 |
+| `"small_cnn"` | The three-block CNN from Week 11, trained from scratch. Good for images unlike everyday photos: drawings, spectrograms, sensor plots | 64 (or 96) |
+| `"mlp"` | The image flattened into one row, then two Linear layers. This is your **MLP baseline** | 64 |
+
+`small_cnn` and `mlp` train every layer in one phase, using
+`LR_SCRATCH` and `EPOCHS_SCRATCH`. Keep their `IMAGE_SIZE` small: at
+224, the first Linear layer would have tens of millions of weights.
+
 **The first run:** set `REPO_URL`, keep the default settings, and
-choose **Runtime → Run all**. It trains a pretrained ResNet-18 in two
-phases, as in Week 12: first only the new head, then the whole network
-at a smaller learning rate.
+choose **Runtime → Run all**.
 
 Check these outputs:
 
 - **Step 5, baseline:** the accuracy of always answering the largest
   class. Your model must beat it clearly.
+- **Step 7:** the number of parameters in your model (Week 11).
 - **Step 6, overfit one batch:** the loss should end near 0. If not,
   something is wrong with the data or the labels; fix that first.
 - **Steps 7–8, training:** one line per epoch. The best epoch's
   weights are saved to `outputs/best.pt` on Drive.
 - **Step 9, learning curves:** saved as `outputs/learning_curves.png`.
+
+**Your two baselines.** The final project asks for two: the
+largest-class baseline (Step 5 prints it every run) and an **MLP**.
+Do one run with `MODEL = "mlp"` and `IMAGE_SIZE = 64`, and keep its
+row in the log, so you can show how much your CNN adds.
 
 **Every run after that: change one thing.** Change one setting in
 Step 2, write what you changed in `RUN_NOTE` (for example
@@ -280,8 +297,8 @@ wrong test images. Use these in your error analysis. Do not go back
 and tune settings after you look at the test score: then it no longer
 measures how the model does on new data.
 
-**At the end,** Step 12 downloads `best.pt` and `classes.json`. You
-need them for the app.
+**At the end,** Step 12 downloads `best.pt`, `classes.json` and
+`model_info.json`. You need all three for the app.
 
 ---
 
@@ -310,8 +327,9 @@ The app runs on your laptop, not in Colab.
 1. Download your repo to your laptop:
    `git clone <your repo address>`, or **Code → Download ZIP** on
    GitHub.
-2. Put `best.pt` and `classes.json` (from Step 4) into the `app/`
-   folder. For a table model, put `best.pt` and `info.json` there.
+2. Put `best.pt`, `classes.json` and `model_info.json` (from Step 4)
+   into the `app/` folder, all three from the **same run**. For a table
+   model, put `best.pt` and `info.json` there.
 3. In a terminal, install the packages once:
    ```
    cd app
@@ -327,10 +345,12 @@ The app runs on your laptop, not in Colab.
    stops the app.
 
 **Edit the parts marked CHANGE** in `app.py`: the title and the
-instructions. If you changed `IMAGE_SIZE` in notebook 02, change the
-transforms in `app.py` to match. The app must prepare an image exactly
-as validation did, or its predictions are worse than your test results
-(this is *train/serve skew*, Week 13).
+instructions. The app reads `model_info.json` to build the same model
+and resize images to the same size as notebook 02 did. An app that
+prepares images differently from validation predicts worse than your
+test results (this is *train/serve skew*, Week 13). If you change a
+model's layers in `src/train_utils.py`, change `build_model` in
+`app.py` the same way.
 
 ---
 
@@ -341,7 +361,8 @@ as validation did, or its predictions are worse than your test results
 - The notebooks, with their outputs, after your final run. In Colab,
   **File → Save a copy in GitHub** saves a notebook straight into your
   repo (pick your repo and the `notebooks/` path).
-- `app/` with `best.pt` and `classes.json` (or `info.json`).
+- `app/` with `best.pt`, `classes.json` and `model_info.json` (or
+  `info.json` for a table model).
   ResNet-18's `best.pt` is about 45 MB; GitHub accepts files up to
   100 MB.
 - A `results/` folder with copies of `experiments.csv`,
@@ -367,7 +388,8 @@ inside Colab's file browser are lost when the session ends.
 |---|---|
 | A dataset you built or cleaned | Steps 1–2; notebook 01 removes broken files and duplicates |
 | A proper data split | Notebook 01, Step 10: `splits.csv` (plus groups, if needed) |
-| Baselines | Notebook 02, Step 5 |
+| Baselines (largest class and MLP) | Notebook 02: Step 5 every run, plus one run with `MODEL = "mlp"` |
+| A small CNN or a pretrained CNN | Notebook 02: `MODEL = "small_cnn"` or `"resnet18"` |
 | Learning curves | Notebook 02, Step 9: `learning_curves.png` |
 | A log of experiments | Notebook 02, Step 10: `experiments.csv` |
 | An honest analysis of errors | Notebook 02, Step 11: per-class accuracy, confusion matrix, worst mistakes |
@@ -397,6 +419,7 @@ your data, your experiments, and what you conclude from them.
 | Validation accuracy is near 100% from the first epoch | Suspect leakage: duplicates under different names, the same subject in train and val (use groups), or something in the image that gives the answer away (a watermark, a background). |
 | Test accuracy is much lower than validation accuracy | You may have tuned on validation for many runs, or the test images differ (another source, another time). Describe it honestly in your report. |
 | The app predicts the same class for everything | The app's transforms differ from training (`IMAGE_SIZE`, normalization), or `classes.json` is from another run. |
-| `size mismatch for fc.weight` in the app | `best.pt` and `classes.json` come from different runs, or the app builds a different model. Copy both files from the same run. |
+| `size mismatch` in the app | `best.pt`, `classes.json` and `model_info.json` come from different runs. Copy all three from the same run. |
+| `CUDA out of memory` or a huge parameter count with `small_cnn` or `mlp` | `IMAGE_SIZE` is too large for these models. Use 64. |
 
 Still stuck? Bring the notebook (with its outputs) to office hours.

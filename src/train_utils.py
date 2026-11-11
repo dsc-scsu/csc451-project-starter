@@ -68,6 +68,60 @@ def make_resnet18(n_classes, pretrained=True):
     return model
 
 
+def make_small_cnn(n_classes, image_size=64):
+    """The Week 11 CNN: three conv blocks, then two Linear layers.
+
+    Each block is Conv2d -> ReLU -> MaxPool2d(2), so the height and width
+    are halved three times: 64 -> 32 -> 16 -> 8. Images are RGB, so the
+    first Conv2d has 3 input channels.
+    """
+    side = image_size // 8  # height and width after three poolings
+    return nn.Sequential(
+        nn.Conv2d(3, 32, 3, padding=1),    # conv block 1
+        nn.ReLU(),
+        nn.MaxPool2d(2),
+        nn.Conv2d(32, 64, 3, padding=1),   # conv block 2
+        nn.ReLU(),
+        nn.MaxPool2d(2),
+        nn.Conv2d(64, 128, 3, padding=1),  # conv block 3
+        nn.ReLU(),
+        nn.MaxPool2d(2),
+        nn.Flatten(),                      # classifier
+        nn.Linear(128 * side * side, 256),
+        nn.ReLU(),
+        nn.Linear(256, n_classes),
+    )
+
+
+def make_mlp(n_classes, image_size=64):
+    """An MLP baseline: flatten the image, then two Linear layers.
+
+    It sees the image as one long row of numbers (Week 11, Part 2), so
+    it shows how much the convolution layers add.
+    """
+    return nn.Sequential(
+        nn.Flatten(),
+        nn.Linear(3 * image_size * image_size, 256),
+        nn.ReLU(),
+        nn.Linear(256, n_classes),
+    )
+
+
+def make_model(name, n_classes, image_size, pretrained=True):
+    """Build the model named "resnet18", "small_cnn" or "mlp"."""
+    if name == "resnet18":
+        return make_resnet18(n_classes, pretrained)
+    if name == "small_cnn":
+        return make_small_cnn(n_classes, image_size)
+    if name == "mlp":
+        return make_mlp(n_classes, image_size)
+    raise ValueError('MODEL must be "resnet18", "small_cnn" or "mlp"')
+
+
+def count_parameters(model):
+    return sum(p.numel() for p in model.parameters())
+
+
 def freeze_backbone(model):
     """Freeze every layer except the head (model.fc)."""
     for p in model.parameters():
