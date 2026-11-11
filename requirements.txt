@@ -1,0 +1,9 @@
+# Packages for running the notebooks on your own computer.
+# Colab already has all of them.
+torch
+torchvision
+pandas
+scikit-learn
+matplotlib
+pillow
+jupyter

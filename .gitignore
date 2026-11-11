@@ -1,0 +1,14 @@
+# Data and results live in Google Drive, not in the repo
+project_files/
+data/
+*.zip
+outputs/
+
+# Python and notebook clutter
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+.DS_Store
+
+# app/best.pt is NOT ignored: the app needs it, and ResNet-18 is ~45 MB.
+# GitHub refuses files over 100 MB.
